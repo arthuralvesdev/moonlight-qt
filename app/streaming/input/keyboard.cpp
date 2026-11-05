@@ -490,6 +490,14 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                 keyCode = 0xDE;
                 break;
             case SDL_SCANCODE_INTERNATIONAL1:
+                if (m_AbntAltGrFallback) {
+                    // Hosts that can't map VK_ABNT_C1 (e.g. Sunshine on Linux) get the
+                    // same character via AltGr+Q ('/') or AltGr+W ('?') of the ABNT2 layout.
+                    if (event->state == SDL_PRESSED) {
+                        sendAbntSlashViaAltGr((event->keysym.mod & KMOD_SHIFT) != 0, modifiers);
+                    }
+                    return;
+                }
                 shouldNotConvertToScanCodeOnServer = true;
                 keyCode = VK_ABNT_C1;
                 break;
@@ -526,6 +534,19 @@ void SdlInputHandler::handleKeyEvent(SDL_KeyboardEvent* event)
                              KEY_ACTION_DOWN : KEY_ACTION_UP,
                          modifiers,
                          flags);
+}
+
+void SdlInputHandler::sendAbntSlashViaAltGr(bool question, char modifiers)
+{
+    // With Shift held the host sits on layout level 4, where AltGr+Q and
+    // AltGr+W still produce '/' and '?', so Shift needs no special handling.
+    const short altGr = 0xA5 | 0x8000; // VK_RMENU
+    const short key = (question ? 0x57 : 0x51) | 0x8000; // W : Q
+
+    LiSendKeyboardEvent2(altGr, KEY_ACTION_DOWN, modifiers, 0);
+    LiSendKeyboardEvent2(key, KEY_ACTION_DOWN, modifiers, 0);
+    LiSendKeyboardEvent2(key, KEY_ACTION_UP, modifiers, 0);
+    LiSendKeyboardEvent2(altGr, KEY_ACTION_UP, modifiers, 0);
 }
 
 void SdlInputHandler::raiseAllKeys()

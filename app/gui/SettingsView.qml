@@ -1884,6 +1884,23 @@ Flickable {
                         StreamingPreferences.clipSyncToken = text.trim()
                     }
                 }
+
+                CheckBox {
+                    id: abntAltGrFallback
+                    width: parent.width
+                    text: qsTr("ABNT2: type / and ? with AltGr+Q / AltGr+W (Linux hosts)")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.abntAltGrFallback
+                    onCheckedChanged: {
+                        StreamingPreferences.abntAltGrFallback = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 8000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Sunshine on Linux can't map the ABNT2 / ? key (VK_ABNT_C1), so it is sent as AltGr+Q (/) or AltGr+W (?).") + "\n\n" +
+                                  qsTr("Requires the host to use the Brazilian ABNT2 keyboard layout. Leave off for Windows hosts.")
+                }
             }
         }
     }

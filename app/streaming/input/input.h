@@ -134,6 +134,8 @@ public:
 
     void raiseAllKeys();
 
+    void sendAbntSlashViaAltGr(bool question, char modifiers);
+
     void notifyMouseLeave();
 
     void notifyFocusLost();
@@ -209,6 +211,7 @@ private:
     bool m_SwapMouseButtons;
     bool m_ReverseScrollDirection;
     bool m_SwapFaceButtons;
+    bool m_AbntAltGrFallback;
 
     bool m_NeedsManualCaptureOnLeave;
     bool m_MouseWasInVideoRegion;

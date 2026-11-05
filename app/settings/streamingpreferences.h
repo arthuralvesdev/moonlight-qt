@@ -144,6 +144,7 @@ public:
     Q_PROPERTY(QString clipSyncHost MEMBER clipSyncHost NOTIFY clipSyncHostChanged)
     Q_PROPERTY(int clipSyncPort MEMBER clipSyncPort NOTIFY clipSyncPortChanged)
     Q_PROPERTY(QString clipSyncToken MEMBER clipSyncToken NOTIFY clipSyncTokenChanged)
+    Q_PROPERTY(bool abntAltGrFallback MEMBER abntAltGrFallback NOTIFY abntAltGrFallbackChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
@@ -190,6 +191,7 @@ public:
     QString clipSyncHost;
     int clipSyncPort;
     QString clipSyncToken;
+    bool abntAltGrFallback;
     bool swapMouseButtons;
     bool muteOnFocusLoss;
     bool backgroundGamepad;
@@ -241,6 +243,7 @@ signals:
     void clipSyncHostChanged();
     void clipSyncPortChanged();
     void clipSyncTokenChanged();
+    void abntAltGrFallbackChanged();
     void mouseButtonsChanged();
     void muteOnFocusLossChanged();
     void backgroundGamepadChanged();
