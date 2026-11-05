@@ -9,6 +9,17 @@ Moonlight client (this fork)  <-- TCP, newline-delimited JSON, shared token --> 
 Unlike the stock client, text copied on the host shows up in the client clipboard
 and vice versa. Text only, max 256 KiB, no files or images.
 
+## Host (Windows)
+
+Requires only Python 3 (no extra packages). Create `%USERPROFILE%\.config\moonlight-clipsync\config` with `TOKEN=...`, `BIND=<Tailscale/LAN IP>`, `PORT=48100`, then run:
+
+```
+python clipsync\host\moonlight-clipsync-host.py
+```
+
+It must run inside your interactive Windows session (not as a service) so it can reach the clipboard. Allow the port in Windows Firewall if the client cannot connect.
+
+
 ## Host (KDE Plasma, e.g. CachyOS)
 
 Requires Python 3 with `dbus-python` and `PyGObject` (`python-dbus`, `python-gobject`) and Klipper running.

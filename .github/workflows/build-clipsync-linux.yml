@@ -1,0 +1,15 @@
+---
+name: Build - ClipSync Linux AppImage
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - clipsync-linux
+
+jobs:
+  appimage:
+    uses: ./.github/workflows/build-appimage.yml
+    with:
+      ci_version: clipsync

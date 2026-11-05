@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Moonlight ClipSync host sidecar.
 
-Bidirectional plain-text clipboard sync between a KDE Plasma host (via Klipper
-on D-Bus) and a Moonlight client fork that implements the ClipSync protocol.
+Bidirectional plain-text clipboard sync between a host (KDE Plasma via Klipper on
+D-Bus, or Windows via the Win32 clipboard API) and a Moonlight client fork that implements the ClipSync protocol.
 
 Protocol: newline-delimited JSON over TCP.
   client -> host : {"t":"hello","token":"<shared secret>"}
@@ -24,10 +24,12 @@ import os
 import sys
 import threading
 from pathlib import Path
+import time
 
-import dbus
-import dbus.mainloop.glib
-from gi.repository import GLib
+if sys.platform != "win32":
+    import dbus
+    import dbus.mainloop.glib
+    from gi.repository import GLib
 
 MAX_TEXT_BYTES = 256 * 1024
 MAX_LINE_BYTES = 2 * 1024 * 1024  # JSON escaping can inflate the payload
@@ -96,6 +98,105 @@ class Klipper:
         GLib.idle_add(run)
 
 
+class WinClipboard:
+    """Win32 clipboard (CF_UNICODETEXT), change detection by sequence number."""
+
+    CF_UNICODETEXT = 13
+    GMEM_MOVEABLE = 0x0002
+    POLL_INTERVAL_S = 0.15
+
+    def __init__(self, on_change):
+        import ctypes
+        from ctypes import wintypes
+
+        self._ctypes = ctypes
+        self._on_change = on_change
+        self._lock = threading.Lock()
+
+        u32 = ctypes.WinDLL("user32", use_last_error=True)
+        k32 = ctypes.WinDLL("kernel32", use_last_error=True)
+        u32.OpenClipboard.argtypes = [wintypes.HWND]
+        u32.OpenClipboard.restype = wintypes.BOOL
+        u32.CloseClipboard.restype = wintypes.BOOL
+        u32.EmptyClipboard.restype = wintypes.BOOL
+        u32.IsClipboardFormatAvailable.argtypes = [wintypes.UINT]
+        u32.IsClipboardFormatAvailable.restype = wintypes.BOOL
+        u32.GetClipboardData.argtypes = [wintypes.UINT]
+        u32.GetClipboardData.restype = wintypes.HANDLE
+        u32.SetClipboardData.argtypes = [wintypes.UINT, wintypes.HANDLE]
+        u32.SetClipboardData.restype = wintypes.HANDLE
+        u32.GetClipboardSequenceNumber.restype = wintypes.DWORD
+        k32.GlobalAlloc.argtypes = [wintypes.UINT, ctypes.c_size_t]
+        k32.GlobalAlloc.restype = wintypes.HGLOBAL
+        k32.GlobalLock.argtypes = [wintypes.HGLOBAL]
+        k32.GlobalLock.restype = wintypes.LPVOID
+        k32.GlobalUnlock.argtypes = [wintypes.HGLOBAL]
+        k32.GlobalFree.argtypes = [wintypes.HGLOBAL]
+        self._u32, self._k32 = u32, k32
+        self._thread = threading.Thread(target=self._poll, name="clipboard-poll", daemon=True)
+
+    def start(self) -> None:
+        self._seq = self._u32.GetClipboardSequenceNumber()  # do not send what is already there
+        self._thread.start()
+
+    def _open(self) -> bool:
+        for _ in range(20):  # another process may hold the clipboard briefly
+            if self._u32.OpenClipboard(None):
+                return True
+            time.sleep(0.01)
+        return False
+
+    def _get_text(self):
+        if not self._open():
+            return None
+        try:
+            if not self._u32.IsClipboardFormatAvailable(self.CF_UNICODETEXT):
+                return None
+            handle = self._u32.GetClipboardData(self.CF_UNICODETEXT)
+            if not handle:
+                return None
+            ptr = self._k32.GlobalLock(handle)
+            if not ptr:
+                return None
+            try:
+                return self._ctypes.wstring_at(ptr).replace("\r\n", "\n")
+            finally:
+                self._k32.GlobalUnlock(handle)
+        finally:
+            self._u32.CloseClipboard()
+
+    def _poll(self) -> None:
+        while True:
+            time.sleep(self.POLL_INTERVAL_S)
+            with self._lock:
+                seq = self._u32.GetClipboardSequenceNumber()
+                if seq == self._seq:
+                    continue
+                self._seq = seq
+                text = self._get_text()
+            if text:
+                self._on_change(text)
+
+    def set_text(self, text: str) -> None:
+        data = (text.replace("\r\n", "\n").replace("\n", "\r\n") + "\0").encode("utf-16-le")
+        with self._lock:
+            if not self._open():
+                log("clipboard write failed: clipboard is locked by another process")
+                return
+            try:
+                handle = self._k32.GlobalAlloc(self.GMEM_MOVEABLE, len(data))
+                ptr = self._k32.GlobalLock(handle)
+                self._ctypes.memmove(ptr, data, len(data))
+                self._k32.GlobalUnlock(handle)
+                self._u32.EmptyClipboard()
+                if not self._u32.SetClipboardData(self.CF_UNICODETEXT, handle):
+                    self._k32.GlobalFree(handle)
+                    log("clipboard write failed: SetClipboardData")
+            finally:
+                self._u32.CloseClipboard()
+            self._seq = self._u32.GetClipboardSequenceNumber()
+
+
 class Server:
     def __init__(self, cfg: dict):
         self.token = cfg["TOKEN"].encode()
@@ -104,7 +205,7 @@ class Server:
         self.writers = set()
         self.last_text = None
         self.loop = None
-        self.klipper = None
+        self.clipboard = None
 
     # ---- host clipboard -> clients (called from the GLib thread) ----
     def _host_changed(self, text: str) -> None:
@@ -123,7 +224,7 @@ class Server:
         if not text or text == self.last_text or len(text.encode()) > MAX_TEXT_BYTES:
             return
         self.last_text = text
-        self.klipper.set_text(text)
+        self.clipboard.set_text(text)
         line = (json.dumps({"t": "clip", "text": text}) + "\n").encode()
         for w in list(self.writers):
             if w is not origin:
@@ -162,8 +263,9 @@ class Server:
 
     async def run(self) -> None:
         self.loop = asyncio.get_running_loop()
-        self.klipper = Klipper(self._host_changed)
-        self.klipper.start()
+        backend = WinClipboard if sys.platform == "win32" else Klipper
+        self.clipboard = backend(self._host_changed)
+        self.clipboard.start()
         while True:  # the Tailscale interface may not be up yet at boot
             try:
                 server = await asyncio.start_server(
