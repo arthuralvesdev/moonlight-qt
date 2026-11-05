@@ -43,6 +43,10 @@
 #define SER_PACKETSIZE "packetsize"
 #define SER_DETECTNETBLOCKING "detectnetblocking"
 #define SER_SHOWPERFOVERLAY "showperfoverlay"
+#define SER_CLIPSYNCENABLED "clipsyncenabled"
+#define SER_CLIPSYNCHOST "clipsynchost"
+#define SER_CLIPSYNCPORT "clipsyncport"
+#define SER_CLIPSYNCTOKEN "clipsynctoken"
 #define SER_SWAPMOUSEBUTTONS "swapmousebuttons"
 #define SER_MUTEONFOCUSLOSS "muteonfocusloss"
 #define SER_BACKGROUNDGAMEPAD "backgroundgamepad"
@@ -144,6 +148,10 @@ void StreamingPreferences::reload()
     gamepadMouse = settings.value(SER_GAMEPADMOUSE, true).toBool();
     detectNetworkBlocking = settings.value(SER_DETECTNETBLOCKING, true).toBool();
     showPerformanceOverlay = settings.value(SER_SHOWPERFOVERLAY, false).toBool();
+    clipSyncEnabled = settings.value(SER_CLIPSYNCENABLED, false).toBool();
+    clipSyncHost = settings.value(SER_CLIPSYNCHOST, "").toString();
+    clipSyncPort = settings.value(SER_CLIPSYNCPORT, 48100).toInt();
+    clipSyncToken = settings.value(SER_CLIPSYNCTOKEN, "").toString();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();
     muteOnFocusLoss = settings.value(SER_MUTEONFOCUSLOSS, false).toBool();
@@ -345,6 +353,10 @@ void StreamingPreferences::save()
     settings.setValue(SER_PACKETSIZE, packetSize);
     settings.setValue(SER_DETECTNETBLOCKING, detectNetworkBlocking);
     settings.setValue(SER_SHOWPERFOVERLAY, showPerformanceOverlay);
+    settings.setValue(SER_CLIPSYNCENABLED, clipSyncEnabled);
+    settings.setValue(SER_CLIPSYNCHOST, clipSyncHost);
+    settings.setValue(SER_CLIPSYNCPORT, clipSyncPort);
+    settings.setValue(SER_CLIPSYNCTOKEN, clipSyncToken);
     settings.setValue(SER_AUDIOCFG, static_cast<int>(audioConfig));
     settings.setValue(SER_HDR, enableHdr);
     settings.setValue(SER_YUV444, enableYUV444);

@@ -1,0 +1,50 @@
+---
+name: Build - ClipSync Windows x64
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - clipsync
+
+jobs:
+  build:
+    runs-on: windows-2025
+    env:
+      QT_VERSION: 6.12.0
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v5
+        with:
+          submodules: 'recursive'
+          fetch-depth: 1
+
+      - name: Download dependencies
+        run: powershell ./setup-deps.ps1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          cache: true
+          set-env: false
+          add-tools-to-path: false
+          version: ${{ env.QT_VERSION }}
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e'
+
+      - name: Build x64 binaries
+        shell: cmd
+        run: |
+          set "PATH=%QT_PATH%;%PATH%"
+          scripts\build-arch.bat Release x64
+        env:
+          QT_PATH: ${{ runner.workspace }}\Qt\${{ env.QT_VERSION }}\msvc2022_64\bin
+
+      - name: Upload portable build
+        uses: actions/upload-artifact@v6
+        with:
+          name: Moonlight-ClipSync-Windows-x64
+          path: build/deploy-x64-release/*
+          if-no-files-found: error

@@ -140,6 +140,10 @@ public:
     Q_PROPERTY(bool gamepadMouse MEMBER gamepadMouse NOTIFY gamepadMouseChanged)
     Q_PROPERTY(bool detectNetworkBlocking MEMBER detectNetworkBlocking NOTIFY detectNetworkBlockingChanged)
     Q_PROPERTY(bool showPerformanceOverlay MEMBER showPerformanceOverlay NOTIFY showPerformanceOverlayChanged)
+    Q_PROPERTY(bool clipSyncEnabled MEMBER clipSyncEnabled NOTIFY clipSyncEnabledChanged)
+    Q_PROPERTY(QString clipSyncHost MEMBER clipSyncHost NOTIFY clipSyncHostChanged)
+    Q_PROPERTY(int clipSyncPort MEMBER clipSyncPort NOTIFY clipSyncPortChanged)
+    Q_PROPERTY(QString clipSyncToken MEMBER clipSyncToken NOTIFY clipSyncTokenChanged)
     Q_PROPERTY(AudioConfig audioConfig MEMBER audioConfig NOTIFY audioConfigChanged)
     Q_PROPERTY(VideoCodecConfig videoCodecConfig MEMBER videoCodecConfig NOTIFY videoCodecConfigChanged)
     Q_PROPERTY(bool enableHdr MEMBER enableHdr NOTIFY enableHdrChanged)
@@ -182,6 +186,10 @@ public:
     bool gamepadMouse;
     bool detectNetworkBlocking;
     bool showPerformanceOverlay;
+    bool clipSyncEnabled;
+    QString clipSyncHost;
+    int clipSyncPort;
+    QString clipSyncToken;
     bool swapMouseButtons;
     bool muteOnFocusLoss;
     bool backgroundGamepad;
@@ -229,6 +237,10 @@ signals:
     void gamepadMouseChanged();
     void detectNetworkBlockingChanged();
     void showPerformanceOverlayChanged();
+    void clipSyncEnabledChanged();
+    void clipSyncHostChanged();
+    void clipSyncPortChanged();
+    void clipSyncTokenChanged();
     void mouseButtonsChanged();
     void muteOnFocusLossChanged();
     void backgroundGamepadChanged();

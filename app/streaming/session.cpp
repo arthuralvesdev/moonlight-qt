@@ -2,6 +2,8 @@
 #include "settings/streamingpreferences.h"
 #include "streaming/streamutils.h"
 #include "backend/richpresencemanager.h"
+#include "streaming/clipsync.h"
+#include <memory>
 
 #include <Limelight.h>
 #include "SDL_compat.h"
@@ -1967,6 +1969,16 @@ void Session::exec()
     // Start rich presence to indicate we're in game
     RichPresenceManager presence(*m_Preferences, m_App.name);
 
+    // Start clipboard sync with the host sidecar if the user enabled it
+    std::unique_ptr<ClipSync> clipSync;
+    if (m_Preferences->clipSyncEnabled && !m_Preferences->clipSyncToken.isEmpty()) {
+        QString clipSyncHost = m_Preferences->clipSyncHost.isEmpty() ?
+                                   m_Computer->activeAddress.address() : m_Preferences->clipSyncHost;
+        clipSync = std::make_unique<ClipSync>(clipSyncHost,
+                                              static_cast<quint16>(m_Preferences->clipSyncPort),
+                                              m_Preferences->clipSyncToken);
+    }
+
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
 
@@ -2023,6 +2035,12 @@ void Session::exec()
                 break;
             case SDL_CODE_FLUSH_WINDOW_EVENT_BARRIER:
                 m_FlushingWindowEventsRef--;
+                break;
+            case SDL_CODE_CLIPBOARD_SET:
+                if (clipSync) {
+                    clipSync->applyRemoteText(static_cast<const char*>(event.user.data1));
+                }
+                SDL_free(event.user.data1);
                 break;
             case SDL_CODE_GAMECONTROLLER_RUMBLE:
                 m_InputHandler->rumble((uint16_t)(uintptr_t)event.user.data1,
@@ -2258,6 +2276,13 @@ void Session::exec()
             SDL_UnlockMutex(m_DecoderLock);
             break;
 
+#if SDL_VERSION_ATLEAST(2, 0, 14)
+        case SDL_CLIPBOARDUPDATE:
+            if (clipSync) {
+                clipSync->onLocalClipboardChanged();
+            }
+            break;
+#endif
         case SDL_KEYUP:
         case SDL_KEYDOWN:
             presence.runCallbacks();
@@ -2323,6 +2348,9 @@ void Session::exec()
 DispatchDeferredCleanup:
     // Switch back to synchronous logging mode
     StreamUtils::exitAsyncLoggingMode();
+
+    // Stop clipboard sync before the window and SDL are torn down
+    clipSync.reset();
 
     // Uncapture the mouse and hide the window immediately,
     // so we can return to the Qt GUI ASAP.

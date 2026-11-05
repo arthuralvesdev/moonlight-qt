@@ -1810,6 +1810,80 @@ Flickable {
                                   qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
                                   qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 }
+
+                CheckBox {
+                    id: clipSyncEnabled
+                    width: parent.width
+                    text: qsTr("Sync clipboard with host (ClipSync)")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.clipSyncEnabled
+                    onCheckedChanged: {
+                        StreamingPreferences.clipSyncEnabled = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 8000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Shares plain-text clipboard contents in both directions while streaming.") + "\n\n" +
+                                  qsTr("Requires the moonlight-clipsync-host sidecar running on the host PC.") + "\n\n" +
+                                  qsTr("Anything you copy while streaming is sent to the host, even from other windows.")
+                }
+
+                Label {
+                    visible: clipSyncEnabled.checked
+                    text: qsTr("ClipSync host (leave empty to use the streaming address):")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    width: parent.width
+                }
+
+                TextField {
+                    visible: clipSyncEnabled.checked
+                    width: parent.width
+                    text: StreamingPreferences.clipSyncHost
+                    placeholderText: qsTr("e.g. 100.111.28.99")
+                    onTextChanged: {
+                        StreamingPreferences.clipSyncHost = text.trim()
+                    }
+                }
+
+                Label {
+                    visible: clipSyncEnabled.checked
+                    text: qsTr("ClipSync port:")
+                    font.pointSize: 12
+                }
+
+                TextField {
+                    visible: clipSyncEnabled.checked
+                    width: parent.width
+                    maximumLength: 5
+                    inputMethodHints: Qt.ImhDigitsOnly
+                    validator: IntValidator { bottom: 1; top: 65535 }
+                    text: StreamingPreferences.clipSyncPort
+                    onTextChanged: {
+                        if (acceptableInput) {
+                            StreamingPreferences.clipSyncPort = parseInt(text)
+                        }
+                    }
+                }
+
+                Label {
+                    visible: clipSyncEnabled.checked
+                    text: qsTr("ClipSync token (from the host's config file):")
+                    font.pointSize: 12
+                    wrapMode: Text.Wrap
+                    width: parent.width
+                }
+
+                TextField {
+                    visible: clipSyncEnabled.checked
+                    width: parent.width
+                    echoMode: TextInput.Password
+                    text: StreamingPreferences.clipSyncToken
+                    onTextChanged: {
+                        StreamingPreferences.clipSyncToken = text.trim()
+                    }
+                }
             }
         }
     }
