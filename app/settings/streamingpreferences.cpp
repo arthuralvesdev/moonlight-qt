@@ -152,7 +152,8 @@ void StreamingPreferences::reload()
     clipSyncEnabled = settings.value(SER_CLIPSYNCENABLED, false).toBool();
     clipSyncHost = settings.value(SER_CLIPSYNCHOST, "").toString();
     clipSyncPort = settings.value(SER_CLIPSYNCPORT, 48100).toInt();
-    clipSyncToken = settings.value(SER_CLIPSYNCTOKEN, "").toString();
+    // Trimmed: a pasted/registry-written token often carries a trailing CR/LF the host never matches.
+    clipSyncToken = settings.value(SER_CLIPSYNCTOKEN, "").toString().trimmed();
     abntAltGrFallback = settings.value(SER_ABNTALTGR, false).toBool();
     packetSize = settings.value(SER_PACKETSIZE, 0).toInt();
     swapMouseButtons = settings.value(SER_SWAPMOUSEBUTTONS, false).toBool();

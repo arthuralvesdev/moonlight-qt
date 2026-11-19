@@ -43,7 +43,8 @@ def log(msg: str) -> None:
 def load_config() -> dict:
     path = Path(os.environ.get("CLIPSYNC_CONFIG", "~/.config/moonlight-clipsync/config")).expanduser()
     cfg = {"BIND": "127.0.0.1", "PORT": "48100"}
-    for raw in path.read_text(encoding="utf-8").splitlines():
+    # utf-8-sig: Windows editors/PowerShell often write a BOM, which would corrupt the first key.
+    for raw in path.read_text(encoding="utf-8-sig").splitlines():
         raw = raw.strip()
         if not raw or raw.startswith("#") or "=" not in raw:
             continue
